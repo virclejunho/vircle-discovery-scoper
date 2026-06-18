@@ -618,27 +618,43 @@ function scriptBlocks(){
   if(!isSetId('oms')&&!isSetId('erp')) add("3","취합 방식 질문","외부 플랫폼 고객 정보는 지금 어떤 방식으로 취합하세요? OMS(사방넷·이지어드민·셀메이트)인지, ERP/POS가 따로 있는지요.");
 
   // ── 선택지별 (이런 어려움이 있었을 것 → 버클은 이렇게 해결) 페어 생성. 모든 선택사항을 그라운딩대로 커버 ──
-  const recoverable = masked.filter(c=>RULESET.access[c].lv==='warn'); // 어드민엔 빠지지만 OMS 경유 가능(수기·기간 제한)
+  const recoverable = masked.filter(c=>RULESET.access[c].lv==='warn'); // 어드민엔 빠짐 — 추출 경로가 갈림
+  const OMS_PATH = ['29CM','W컨셉 / 온더룩','KREAM(크림)'];                 // OMS 경유로 실번호 추출
+  const omsCh = recoverable.filter(c=>OMS_PATH.includes(c));
+  const directCh = recoverable.filter(c=>!OMS_PATH.includes(c));          // 오늘의집(90일)·무신사 비MFS(송장 일부) = 플랫폼 직접
   const hasOMS = state.oms && state.oms!=='없음';
-  const manualSys = sys.filter(s=>s.mode==='manual' && s.cat!=='POS').map(s=>s.name); // 수기 OMS/ERP만 (POS는 오프라인 항목이 담당)
+  const manualSys = sys.filter(s=>s.mode==='manual' && s.cat!=='POS' && s.key!=='sabangnet').map(s=>s.name); // 사방넷은 별도(아래)
   const concerns=[]; // {pain, fix}
 
   if(badCh.length) concerns.push({
-    pain:`${chList(badCh)}에서 산 고객은 플랫폼이 안심번호만 내줘서, OMS·ERP로 끌어오셔도 실번호가 없어 마케팅에 쓰기 어렵습니다`,
+    pain:`${chList(badCh)}에서 산 고객은 플랫폼이 ${badCh.includes('카카오 선물하기')?'안심번호만 내주거나 수신자 정보 자체가 없어서':'안심번호만 내줘서'}, OMS·ERP로 끌어오셔도 실번호가 없어 마케팅에 쓰기 어렵습니다`,
     fix:`${chList(badCh)}처럼 지금은 받을 길이 없던 고객도 보증서 등록을 유도해 자사 접점에서 식별하는 구조를 만들 수 있습니다`});
-  if(recoverable.length) concerns.push({
+  if(omsCh.length) concerns.push({
     pain: hasOMS
-      ? `${chList(recoverable)} 고객은 어드민에선 번호가 빠지거나 기간 제한이 걸려서, ${state.oms} 같은 OMS에서 그때그때 수기로 추출·정리하셔야 하는 번거로움이 있습니다`
-      : `${chList(recoverable)} 고객은 어드민에선 번호가 빠지거나 기간 제한이 걸려서, 따로 받아오는 경로가 없으면 실고객을 모으기 번거롭습니다`,
-    fix:`${chList(recoverable)}처럼 OMS에서 일일이 빼내시던 데이터도 보증서 발급 시점에 자동으로 한 곳에 모입니다`});
+      ? `${chList(omsCh)} 고객은 플랫폼 어드민엔 번호가 빠져서 ${state.oms} 같은 OMS에서 받아야 하는데, 매번 수기로 추출·정리하셔야 해 손이 많이 갑니다`
+      : `${chList(omsCh)} 고객은 플랫폼 어드민엔 번호가 빠져서, 받아오는 OMS가 없으면 실고객을 모으기 어렵습니다`,
+    fix:`${chList(omsCh)}처럼 OMS에서 일일이 빼내시던 데이터도 보증서 발급 시점에 자동으로 한 곳에 모입니다`});
+  if(directCh.length){
+    const dp=[];
+    if(directCh.includes('오늘의집')) dp.push('오늘의집은 구매확정 후 90일·한 번에 5,000건까지만 개인정보를 받을 수 있어, 정기적으로 받아두지 않으면 그 기간이 지난 고객은 다시 못 받습니다');
+    if(directCh.includes('무신사 (비MFS)')) dp.push('무신사 자체배송 건은 택배 송장목록에서 연락처가 일부만 와서, 받을 수 있는지 필드 단위로 확인이 필요합니다');
+    concerns.push({ pain: dp.join('. '),
+      fix:`이런 채널은 정기·분할 추출 스케줄을 걸어 기한 안에 빠짐없이 받고, 받은 고객은 보증서로 자사 멤버로 묶어 둡니다`});
+  }
   if(has('thpl')) concerns.push({
     pain:`물류를 3PL에 위탁하고 계셔서 고객 데이터 권한이 3PL에 있다 보니, 구매자 명단을 직접 받아 마케팅에 활용하기 어려우셨을 것 같습니다`,
     fix:`버클이 3PL과 데이터 양식을 협의해(버클→브랜드→3PL) 전용 파일로 받아오고, 보증서를 기준으로 한 곳에 통합해 드립니다`});
-  if(has('sap')||has('sewon')) concerns.push({
+  if(has('sap')) concerns.push({
     pain:`본사·그룹 전산을 쓰셔서 외부 도구와 직접 연동이 까다롭고, 데이터 한 번 빼는 데도 승인·개발이 필요해 시간이 걸리셨을 겁니다`,
     fix:`직접 연동 대신 본사 승인 범위에 맞춘 전용 CDP를 구축하는 방식으로, 무리 없이 데이터를 모으도록 설계합니다`});
+  if(has('sewon')) concerns.push({
+    pain:`세원ERP는 데이터를 내려받는 방식이 아니라 그룹 차원에서 전용 연동을 걸어야 해서, 보증서·포인트·쿠폰을 묶으려면 별도 개발·협의가 필요하셨을 겁니다`,
+    fix:`버클이 세원과 전용 주문·고객 연동 API(보증서·포인트·쿠폰)를 구축해, SJ그룹 환경에 맞춰 데이터를 모읍니다`});
+  if(has('sabangnet')) concerns.push({
+    pain:`사방넷은 소급으로 가져올 수 있는 데이터가 보통 최근 3개월 정도라 과거 고객이 적고, 취소·교환·반품 상태가 깔끔히 안 잡혀 취소된 건에 보증서가 잘못 나갈 위험도 있습니다`,
+    fix:`데이터가 유실되기 전에 최근분을 빠르게 이관하고, 취소·반품 건을 걸러 실제 구매에만 보증서가 나가도록 잡습니다`});
   if(manualSys.length) concerns.push({
-    pain:`${chList(manualSys)} 같은 시스템은 아직 자동 연동 사례가 없어, 그동안 주문 데이터를 엑셀로 직접 내려받아 정리하셨을 텐데 손이 많이 가셨을 겁니다`,
+    pain:`${chList(manualSys)} 같은 시스템은 자동 연동보다 엑셀 추출이 일반적이라, 그동안 주문 데이터를 직접 내려받아 정리하시느라 손이 많이 가셨을 겁니다`,
     fix:`초기엔 그 엑셀을 그대로 올리면 바로 적재되고(수기 업로드 지원), 중장기엔 API 연동으로 자동화하는 2단계로 부담을 줄입니다`});
   if(has('bizfashion') || (state.return_expr && state.return_expr!=='주문상태 컬럼 명확')) concerns.push({
     pain:`반품·교환이 주문 상태로 깔끔하게 안 잡혀서, 취소된 건까지 섞여 정확한 구매 고객만 추리기 번거로우셨을 겁니다`,
@@ -677,7 +693,7 @@ function scriptBlocks(){
   // ── 클로징 + 비가역성/타이밍 ──
   const trig=(state.timing||[]).filter(t=>t!=='없음/시기상조');
   const coreGap = badCh.length ? '플랫폼에서 산 고객이 누구인지 모르는 점' : recoverable.length ? '플랫폼 고객을 일일이 수기로 모아야 하는 점' : hasOffline ? '온·오프라인 고객이 따로 노는 점' : '구매 고객이 흩어져 재구매 자산이 안 쌓이는 점';
-  let close = `정리하면 지금 ${coreGap}을 버클로 식별·재구매까지 연결하는 그림입니다. 구성안을 솔루션 제안 / 소개서 / 미팅 중 하나로 이어가면 좋겠습니다. 보증서·CRM은 데이터가 쌓일수록 효과가 커져서, 지금 시작하면 3개월 뒤엔 '우리 고객이 누구인지'가 데이터로 남지만 늦게 시작하면 그 기간은 되돌릴 수 없습니다.`;
+  let close = `정리하면 지금 ${coreGap}을 버클로 식별·재구매까지 연결하는 그림입니다. 구성안을 솔루션 제안 / 소개서 / 미팅 중 하나로 이어가면 좋겠습니다. 보증서·CRM은 데이터가 쌓일수록 효과가 커져서, 지금 시작하면 그만큼 빨리 '우리 고객이 누구인지'가 쌓이고, 늦어지는 기간만큼 모을 수 있었던 고객을 놓치게 됩니다.`;
   if(trig.length) close += ` 마침 ${trig.join('·')} 일정이 있으니 거기에 맞춰 역산해 잡겠습니다.`;
   add("7","클로징", close);
 
