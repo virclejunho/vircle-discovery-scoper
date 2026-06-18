@@ -104,6 +104,7 @@
   .sb-ment li:last-child{margin-bottom:2px;}
   .sb-ment li:before{content:'·';position:absolute;left:3px;top:-1px;color:var(--primary);font-weight:800;font-size:17px;}
   .sb-lead{display:block;margin-bottom:2px;}
+  .sb-ment .sb-note{display:block;color:var(--fine);font-size:13px;margin-top:3px;}
   .ask-line{background:var(--primary-soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14.5px;line-height:1.55;color:#0a4a8f;}
   .ask-line .q{font-weight:700;font-size:11px;color:var(--primary);display:block;margin-bottom:4px;letter-spacing:.02em;}
   .ask-line.next{background:#f4f1fb;color:#4a3d7a;}
@@ -616,9 +617,9 @@ function scriptBlocks(){
   const B=[]; const add=(n,when,ment)=>B.push({n,when,ment});
 
   // 오프닝 / 직책 / 정의
-  if(state.decision) add("0","직책 확인",`(결정권자인지 직접 묻지 말고) 이 건은 보통 어느 분 선에서 결정되고, 그분은 어떤 숫자를 보시면 OK 하실까요? — 현재 <em>${state.decision}</em> 응대.`);
-  add("1","오프닝","대표님, 남겨주신 문의 잘 확인했습니다. 가장 중요한 고객 데이터가 지금 어떤 구조로 흩어져 있는지 먼저 짚어보면 정확한 방향을 잡아드릴 수 있어요. 1분만 버클이 뭘 하는지부터 짧게 설명드릴게요.");
-  add("2","버클 한줄정의","버클은 크게 둘을 합니다. 첫째 <em>디지털 보증서</em>로 흩어진 구매 고객을 자동으로 식별·수집하고, 둘째 <em>카카오 CRM</em>으로 재구매를 만듭니다. 가장 큰 문제는 '외부에서 산 고객이 누구인지 모른다'는 점인데, 보증서가 그 첫 단추예요.");
+  if(state.decision) add("0","직책 확인",`(결정권자인지 직접 묻지 말고) 이 건은 보통 어느 분 선에서 결정되고, 그분은 어떤 숫자를 보시면 OK 하실까요?<span class="sb-note">— 현재 <em>${state.decision}</em> 응대 (직책으로 의사결정 근접도 파악)</span>`);
+  add("1","오프닝",`대표님, 남겨주신 문의 잘 확인했습니다. 가장 중요한 고객 데이터가 지금 어떤 구조로 흩어져 있는지 먼저 짚어보면 정확한 방향을 잡아드릴 수 있어요.<br>1분만 버클이 뭘 하는지부터 짧게 설명드릴게요.`);
+  add("2","버클 한줄정의",`<span class="sb-lead">버클은 크게 둘을 합니다:</span><ul><li><em>디지털 보증서</em>로 흩어진 구매 고객을 자동으로 식별·수집</li><li><em>카카오 CRM</em>으로 재구매 유도</li></ul>가장 큰 문제는 '외부에서 산 고객이 누구인지 모른다'는 점인데, 보증서가 그 첫 단추예요.`);
   if(!isSetId('monthly_orders')) add("3","채널·모수 질문",ask('monthly_orders'));
   if(!isSetId('oms')&&!isSetId('erp')) add("3","취합 방식 질문","외부 플랫폼 고객 정보는 지금 어떤 방식으로 취합하세요? OMS(사방넷·이지어드민·셀메이트)인지, ERP/POS가 따로 있는지요.");
 
@@ -684,22 +685,22 @@ function scriptBlocks(){
     `<span class="sb-lead">버클을 쓰면 흩어진 구매 고객을 디지털 보증서로 식별해서, <em>실제로 산 고객과 아직 안 산 잠재 고객을 나눠</em> 마케팅할 수 있게 됩니다. 어디서 샀든 보증서를 발급하는 순간 그 고객이 브랜드 멤버가 되고, 자사몰 재구매로 이어지는 라인이 생깁니다.</span>선택하신 환경에서는 — <ul>${concerns.map(c=>`<li>${c.fix}.</li>`).join('')}</ul>`);
 
   // ── 라운지 퍼스트: 주문고객 → 잠재고객까지 모수 확장 (오프라인 현장수집은 위 오프라인 항목에서 다룸) ──
-  add("라운지 퍼스트","잠재고객까지 — 모수를 키우는 방향",`여기서 한 발 더 나아가, 보증서로 '이미 산' 고객만 모으는 데서 그치지 않고 <em>브랜드 라운지</em>로 아직 구매하지 않은 잠재 고객 데이터까지 모을 수 있어서, 마케팅 가능한 모수 자체가 커집니다. 기존 구매 고객에게 보증서를 소급 발급하면, 지금 카톡 친구이긴 한데 누군지 모르던 분들까지 한 번에 식별·연결됩니다.`);
+  add("라운지 퍼스트","잠재고객까지 — 모수를 키우는 방향",`<span class="sb-lead">여기서 한 발 더 나아가, '이미 산' 고객만이 아니라 더 넓게 모읍니다:</span><ul><li><em>브랜드 라운지</em>로 아직 구매하지 않은 잠재 고객 데이터까지 — 마케팅 가능한 모수 자체가 커집니다</li><li>기존 구매 고객에게 보증서를 <em>소급 발급</em>하면, 카톡 친구이긴 한데 누군지 모르던 분들까지 한 번에 식별·연결됩니다</li></ul>`);
 
   // ── 데이터로 보이는 것 ──
-  add("4","데이터로 보이는 것","고객+구매가 자동 통합되면 VIP가 어디서 나오는지·핵심 상품·성장 채널이 바로 보입니다. 확장에서 가장 중요한 '데이터 기반 의사결정'이 가능해지는 거죠.");
+  add("4","데이터로 보이는 것",`<span class="sb-lead">고객+구매가 자동 통합되면 한눈에 보입니다:</span><ul><li>VIP가 어디서 나오는지</li><li>어떤 상품이 핵심인지</li><li>어떤 채널이 크고 있는지</li></ul>확장에서 가장 중요한 '데이터 기반 의사결정'이 가능해지는 거죠.`);
 
   // ── CRM 효과 + 비용 효율 + 유료툴(예산 신호) ──
-  let crm = `식별된 고객에게 브랜드메시지·친구톡·문자로 재구매·신상품·이탈방지를 자동화합니다. 살 사람한테만 보내니 불특정 다수에 뿌리던 비용이 줄고 ROAS가 올라가는 구조예요.`;
-  if(isSetId('paid_tool')) crm += state.paid_tool==='없음(수동 쿠폰)' ? ` 지금은 수동 쿠폰 수준이라 식별 마케팅으로 얻는 게 특히 클 겁니다.` : ` ${state.paid_tool} 쓰고 계시면, 식별 데이터를 얹어 같은 비용으로 더 정밀하게 돌릴 수 있습니다.`;
-  else crm += ` 고객 데이터 관리는 지금 어떻게 하세요? 따로 쓰시는 유료 툴이 있으신지요.`;
+  let crm = `<span class="sb-lead">식별된 고객에게 카카오 브랜드메시지·친구톡·문자로 재구매·신상품·이탈방지를 자동화합니다.</span>살 사람한테만 보내니, 불특정 다수에 뿌리던 비용이 줄고 ROAS가 올라가는 구조예요.`;
+  if(isSetId('paid_tool')) crm += state.paid_tool==='없음(수동 쿠폰)' ? `<br>지금은 수동 쿠폰 수준이라, 식별 마케팅으로 얻는 게 특히 클 겁니다.` : `<br>${state.paid_tool} 쓰고 계시면, 식별 데이터를 얹어 같은 비용으로 더 정밀하게 돌릴 수 있습니다.`;
+  else crm += `<br>고객 데이터 관리는 지금 어떻게 하세요? 따로 쓰시는 유료 툴이 있으신지요.`;
   add("5","CRM + 비용 효율", crm);
 
   // ── 클로징 + 비가역성/타이밍 ──
   const trig=(state.timing||[]).filter(t=>t!=='없음/시기상조');
   const coreGap = badCh.length ? '플랫폼에서 산 고객이 누구인지 모르는 점' : recoverable.length ? '플랫폼 고객을 일일이 수기로 모아야 하는 점' : hasOffline ? '온·오프라인 고객이 따로 노는 점' : '구매 고객이 흩어져 재구매 자산이 안 쌓이는 점';
-  let close = `정리하면 지금 ${coreGap}을 버클로 식별·재구매까지 연결하는 그림입니다. 구성안을 솔루션 제안 / 소개서 / 미팅 중 하나로 이어가면 좋겠습니다. 보증서·CRM은 데이터가 쌓일수록 효과가 커져서, 지금 시작하면 그만큼 빨리 '우리 고객이 누구인지'가 쌓이고, 늦어지는 기간만큼 모을 수 있었던 고객을 놓치게 됩니다.`;
-  if(trig.length) close += ` 마침 ${trig.join('·')} 일정이 있으니 거기에 맞춰 역산해 잡겠습니다.`;
+  let close = `<span class="sb-lead">정리하면 지금 ${coreGap}을 버클로 식별·재구매까지 연결하는 그림입니다.</span>구성안은 솔루션 제안 / 소개서 / 미팅 중 하나로 이어가면 좋겠습니다.<br>보증서·CRM은 데이터가 쌓일수록 효과가 커져서, 지금 시작하면 그만큼 빨리 '우리 고객이 누구인지'가 쌓이고, 늦어지는 기간만큼 모을 수 있었던 고객을 놓치게 됩니다.`;
+  if(trig.length) close += `<br>마침 ${trig.join('·')} 일정이 있으니 거기에 맞춰 역산해 잡겠습니다.`;
   add("7","클로징", close);
 
   return B;
