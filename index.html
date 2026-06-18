@@ -620,7 +620,7 @@ function scriptBlocks(){
   // ── 선택지별 (이런 어려움이 있었을 것 → 버클은 이렇게 해결) 페어 생성. 모든 선택사항을 그라운딩대로 커버 ──
   const recoverable = masked.filter(c=>RULESET.access[c].lv==='warn'); // 어드민엔 빠지지만 OMS 경유 가능(수기·기간 제한)
   const hasOMS = state.oms && state.oms!=='없음';
-  const manualSys = sys.filter(s=>s.mode==='manual').map(s=>s.name);   // 연동 사례 없는 수기 시스템
+  const manualSys = sys.filter(s=>s.mode==='manual' && s.cat!=='POS').map(s=>s.name); // 수기 OMS/ERP만 (POS는 오프라인 항목이 담당)
   const concerns=[]; // {pain, fix}
 
   if(badCh.length) concerns.push({
@@ -638,7 +638,7 @@ function scriptBlocks(){
     pain:`본사·그룹 전산을 쓰셔서 외부 도구와 직접 연동이 까다롭고, 데이터 한 번 빼는 데도 승인·개발이 필요해 시간이 걸리셨을 겁니다`,
     fix:`직접 연동 대신 본사 승인 범위에 맞춘 전용 CDP를 구축하는 방식으로, 무리 없이 데이터를 모으도록 설계합니다`});
   if(manualSys.length) concerns.push({
-    pain:`${chList(manualSys)}은 아직 자동 연동 사례가 없어, 그동안 주문 데이터를 직접 엑셀로 내려받아 정리하시느라 손이 많이 가셨을 겁니다`,
+    pain:`${chList(manualSys)} 같은 시스템은 아직 자동 연동 사례가 없어, 그동안 주문 데이터를 엑셀로 직접 내려받아 정리하셨을 텐데 손이 많이 가셨을 겁니다`,
     fix:`초기엔 그 엑셀을 그대로 올리면 바로 적재되고(수기 업로드 지원), 중장기엔 API 연동으로 자동화하는 2단계로 부담을 줄입니다`});
   if(has('bizfashion') || (state.return_expr && state.return_expr!=='주문상태 컬럼 명확')) concerns.push({
     pain:`반품·교환이 주문 상태로 깔끔하게 안 잡혀서, 취소된 건까지 섞여 정확한 구매 고객만 추리기 번거로우셨을 겁니다`,
