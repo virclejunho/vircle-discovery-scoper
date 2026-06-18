@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>버클 디커콜 스코퍼</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='15'%20fill='%230066cc'/%3E%3Cpath%20d='M20%2033l8%209%2016-20'%20fill='none'%20stroke='white'%20stroke-width='7'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet" />
+<style>
+  :root{
+    --primary:#0066cc; --primary-focus:#0071e3; --primary-soft:#e8f1fc;
+    --canvas:#ffffff; --parchment:#f5f5f7; --pearl:#fafafc;
+    --ink:#1d1d1f; --ink-muted:#3a3a3c; --fine:#6e6e73;
+    --hairline:#e3e3e6; --divider-soft:#f0f0f2;
+    --kakao:#FEE500; --ok:#1A7A3A; --ok-soft:#e7f3ec;
+    --warn:#B45309; --warn-soft:#fbf0e2; --bad:#c0392b; --bad-soft:#fbeceb;
+    --sans:'Pretendard',-apple-system,system-ui,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --shadow-card:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05);
+    --shadow-pop:0 8px 40px rgba(0,0,0,.18);
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:var(--sans);background:var(--parchment);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;padding-bottom:96px;}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--hairline);}
+  .hwrap{max-width:1120px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .mark{font-weight:800;letter-spacing:.14em;font-size:14px;}
+  .mark .dot{color:var(--primary);}
+  .htitle{font-size:15px;font-weight:600;color:var(--ink);}
+  .brand-field{display:flex;align-items:center;gap:7px;margin-left:2px;}
+  .brand-field input{font-family:var(--sans);font-size:15px;font-weight:600;color:var(--primary);border:none;border-bottom:1.5px dashed #b9d4f0;background:transparent;padding:2px 4px;width:160px;letter-spacing:-.01em;}
+  .brand-field input:focus{outline:none;border-bottom-color:var(--primary);}
+  .legend{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:12px;color:var(--fine);}
+  .legend b{font-weight:600;}
+  .badge{display:inline-flex;align-items:center;justify-content:center;border-radius:99px;font-size:10.5px;font-weight:700;height:17px;padding:0 7px;letter-spacing:0;}
+  .badge.pre{background:var(--ok-soft);color:var(--ok);}
+  .badge.ask{background:var(--primary-soft);color:var(--primary);}
+  .counter{font-size:12px;color:var(--fine);font-variant-numeric:tabular-nums;}
+
+  /* ---------- layout ---------- */
+  main{max-width:1120px;margin:0 auto;padding:26px 24px 40px;}
+  .lede{font-size:14px;color:var(--fine);margin-bottom:22px;max-width:760px;line-height:1.55;}
+  .lede b{color:var(--ink-muted);font-weight:600;}
+  .group{margin-bottom:26px;}
+  .group-h{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--fine);text-transform:uppercase;margin:0 2px 12px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;}
+
+  .card{background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--r);padding:15px 16px 16px;box-shadow:var(--shadow-card);transition:border-color .15s,box-shadow .15s;}
+  .card.filled{border-color:#cfe2f6;}
+  .card.prefilled{border-color:#bfe3cc;background:linear-gradient(0deg,var(--canvas),var(--canvas));}
+  .card.proposal{border-left:3px solid #c9bdf0;background:#faf9fe;}
+  .group-h.next-h{color:#6D3FD4;}
+  .card-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:11px;}
+  .card-label{font-size:15px;font-weight:600;color:var(--ink);line-height:1.4;flex:1;letter-spacing:-.01em;}
+  .card-top .badge{margin-top:2px;flex-shrink:0;}
+  .card-hint{font-size:11.5px;color:var(--fine);margin-top:-4px;margin-bottom:10px;line-height:1.4;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{font-family:var(--sans);font-size:12.5px;font-weight:500;color:var(--ink-muted);background:var(--pearl);border:1px solid var(--hairline);border-radius:99px;padding:6px 12px;cursor:pointer;transition:all .12s ease;letter-spacing:-.01em;white-space:nowrap;}
+  .chip:hover{border-color:#b9d4f0;background:#fff;}
+  .chip.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(0,102,204,.28);}
+  .chip.danger.on{background:var(--bad);border-color:var(--bad);box-shadow:0 2px 8px rgba(192,57,43,.28);}
+  .chip.warn.on{background:var(--warn);border-color:var(--warn);box-shadow:0 2px 8px rgba(180,83,9,.28);}
+
+  /* ---------- footer bar ---------- */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.9);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--hairline);}
+  .barwrap{max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:14px;}
+  .bar-status{font-size:13px;color:var(--fine);}
+  .bar-status b{color:var(--ink);font-weight:600;}
+  .spacer{flex:1;}
+  .btn{font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;border-radius:99px;padding:11px 24px;border:none;transition:transform .1s ease,box-shadow .15s;letter-spacing:-.01em;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 3px 14px rgba(0,102,204,.32);}
+  .btn-primary:disabled{background:#c7c7cc;box-shadow:none;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--fine);border:1px solid var(--hairline);font-weight:500;}
+  .btn-ghost:hover{color:var(--ink);border-color:var(--fine);}
+
+  /* ---------- drawer ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s;}
+  .scrim.open{opacity:1;pointer-events:auto;}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,94vw);background:var(--parchment);z-index:100;box-shadow:var(--shadow-pop);transform:translateX(102%);transition:transform .3s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column;}
+  .drawer.open{transform:translateX(0);}
+  .dr-head{padding:18px 22px 14px;border-bottom:1px solid var(--hairline);display:flex;align-items:center;gap:12px;background:var(--canvas);}
+  .dr-title{font-size:17px;font-weight:700;}
+  .dr-sub{font-size:12px;color:var(--fine);}
+  .dr-x{margin-left:auto;background:var(--pearl);border:1px solid var(--hairline);border-radius:99px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--fine);line-height:1;}
+  .dr-tabs{display:flex;gap:4px;padding:10px 18px 0;background:var(--canvas);border-bottom:1px solid var(--hairline);}
+  .dr-tab{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--fine);background:none;border:none;padding:9px 12px;cursor:pointer;border-bottom:2px solid transparent;}
+  .dr-tab.on{color:var(--primary);border-bottom-color:var(--primary);}
+  .dr-body{flex:1;overflow-y:auto;padding:20px 22px 40px;}
+
+  /* script view */
+  .scriptblk{background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow-card);}
+  .sb-when{font-size:11px;font-weight:700;color:var(--primary);letter-spacing:.01em;margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+  .sb-when .num{background:var(--primary-soft);color:var(--primary);border-radius:6px;padding:1px 6px;font-size:10.5px;}
+  .sb-ment{font-size:15px;line-height:1.62;color:var(--ink);letter-spacing:-.01em;}
+  .sb-ment em{font-style:normal;background:linear-gradient(180deg,transparent 62%,#fff2a8 62%);font-weight:600;}
+  .ask-line{background:var(--primary-soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14.5px;line-height:1.55;color:#0a4a8f;}
+  .ask-line .q{font-weight:700;font-size:11px;color:var(--primary);display:block;margin-bottom:4px;letter-spacing:.02em;}
+  .ask-line.next{background:#f4f1fb;color:#4a3d7a;}
+  .ask-line.next .q{color:#6D3FD4;}
+  .ask-line.next .q b{color:#4a2fae;}
+
+  /* brief view */
+  .brief-sec{margin-bottom:20px;}
+  .brief-h{font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--fine);text-transform:uppercase;margin-bottom:9px;}
+  .kv{background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow-card);}
+  .kv .big{font-size:16px;font-weight:700;color:var(--ink);}
+  .kv .big .tag{font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 8px;margin-left:7px;vertical-align:middle;}
+  .tag.auto{background:var(--ok-soft);color:var(--ok);}
+  .tag.manual{background:var(--warn-soft);color:var(--warn);}
+  .tag.build{background:#eee9fb;color:#6D3FD4;}
+  .tag.coord{background:var(--bad-soft);color:var(--bad);}
+  .kv p{font-size:13px;color:var(--ink-muted);margin-top:6px;line-height:1.55;}
+  .access{display:flex;flex-direction:column;gap:7px;}
+  .arow{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;background:var(--canvas);border:1px solid var(--hairline);border-radius:10px;padding:9px 12px;}
+  .mk{font-size:14px;line-height:1;margin-top:1px;}
+  .arow .ch{font-weight:600;color:var(--ink);min-width:96px;}
+  .arow .note{color:var(--fine);font-size:12px;}
+  .ok{color:var(--ok);} .warn{color:var(--warn);} .bad{color:var(--bad);}
+  .caution{background:var(--canvas);border:1px solid var(--hairline);border-left:3px solid var(--warn);border-radius:10px;padding:11px 14px;margin-bottom:9px;}
+  .caution.star{border-left-color:var(--bad);}
+  .caution .sys{font-size:13px;font-weight:700;margin-bottom:6px;}
+  .caution ul{margin:0;padding-left:17px;}
+  .caution li{font-size:12.5px;color:var(--ink-muted);line-height:1.5;margin-bottom:3px;}
+  .caution li.star{color:var(--bad);font-weight:500;}
+  .fit-badge{display:inline-block;font-size:15px;font-weight:800;padding:5px 13px;border-radius:10px;}
+  .warnbox{background:var(--bad-soft);border:1px solid #f0c9c5;border-radius:10px;padding:11px 14px;font-size:13px;color:#8a2820;line-height:1.55;margin-top:10px;}
+  .warnbox b{color:var(--bad);}
+  .copywrap{padding:14px 22px;border-top:1px solid var(--hairline);background:var(--canvas);}
+  .src{font-size:11px;color:#9a9aa0;margin-top:18px;line-height:1.5;border-top:1px dashed var(--hairline);padding-top:12px;}
+  .empty{color:var(--fine);font-size:13px;font-style:italic;}
+  .toast{position:fixed;bottom:108px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:10px 18px;border-radius:99px;z-index:120;opacity:0;transition:all .25s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:600px){
+    .grid{grid-template-columns:1fr;}
+    .hwrap{padding:10px 16px;} main{padding:18px 16px 30px;} .barwrap{padding:11px 16px;}
+    .legend{width:100%;margin-left:0;order:5;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <span class="mark">VIR<span class="dot">·</span>CLE</span>
+    <span class="htitle">디커콜 스코퍼</span>
+    <span class="brand-field">／<input id="brandName" placeholder="브랜드명" value="" /></span>
+    <span class="legend">
+      <span><span class="badge pre">✓</span> 사전조사</span>
+      <span><span class="badge ask">●</span> 콜에서 확인</span>
+      <span class="counter" id="counter">0 / 0 확정</span>
+    </span>
+  </div>
+</header>
+
+<main>
+  <p class="lede">
+    콜 전 <b>웹·wiki로 채울 수 있는 칸</b>은 미리 채워져 옵니다(✓). 콜 중에는 <b>못 채운 칩만 클릭</b>하고,
+    아래 <b>OK</b>를 누르면 <b>그대로 읽는 콜 스크립트 + 제안 브리프</b>가 나옵니다. 모두 정식 소스 그라운딩 — 수치·사례는 지어내지 않습니다.
+  </p>
+  <div id="fields"></div>
+</main>
+
+<div class="bar">
+  <div class="barwrap">
+    <span class="bar-status" id="barStatus">선택을 시작하세요</span>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost" id="resetBtn">초기화</button>
+    <button class="btn btn-primary" id="okBtn">✅ OK — 스크립트 생성</button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dr-head">
+    <div>
+      <div class="dr-title" id="drTitle">제안 스크립트</div>
+      <div class="dr-sub" id="drSub"></div>
+    </div>
+    <button class="dr-x" id="drX">✕</button>
+  </div>
+  <div class="dr-tabs">
+    <button class="dr-tab on" data-tab="script">📞 콜 스크립트</button>
+    <button class="dr-tab" data-tab="brief">🧭 제안 브리프</button>
+  </div>
+  <div class="dr-body" id="drBody"></div>
+  <div class="copywrap">
+    <button class="btn btn-primary" id="copyBtn" style="width:100%;">📋 노션·슬랙용 마크다운 복사</button>
+  </div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   RULESET — vircle-wiki/integration/playbook.md + 노션 8개 소스 그라운딩.
+   지어내지 않음. 미검증 항목은 spec.md §6 참조.
+   ============================================================ */
+const RULESET = {
+  fields: [
+    { group:"채널 · 모수", id:"owned_mall", label:"자사몰 / 호스팅사", multi:false, prefill:true, q:"자사몰의 호스팅사는 어디를 쓰고 계세요?",
+      ask:"자사몰은 운영하고 계세요? 호스팅은 카페24나 쇼피파이 같은 걸 쓰시는지 궁금합니다.",
+      options:[
+        {v:"카페24",      sys:"cafe24"},
+        {v:"쇼피파이",     sys:"shopify"},
+        {v:"메이크샵",     sys:"makeshop"},
+        {v:"자체 앱",      sys:"ownapp"},
+        {v:"없음",        tone:"warn"} ] },
+
+    { group:"채널 · 모수", id:"marketplace", label:"입점 플랫폼 (+무신사 MFS 여부)", multi:true, prefill:true, q:"외부 플랫폼은 어디에 입점해 계세요? (무신사면 MFS 여부도요)",
+      hint:"무신사는 자체배송/MFS 여부가 데이터 수집을 가른다. 멀티선택.",
+      ask:"외부 플랫폼은 어디에 입점해 계세요? 특히 무신사는 자체배송인지, MFS 풀필먼트인지가 데이터 수집에 크게 갈려서요.",
+      options:[
+        {v:"무신사(자체배송)", ch:"무신사 (비MFS)",   tone:"warn"},
+        {v:"무신사 MFS",       ch:"무신사 MFS",       tone:"danger"},
+        {v:"29CM",            ch:"29CM",             tone:"warn"},
+        {v:"W컨셉",           ch:"W컨셉 / 온더룩",    tone:"warn"},
+        {v:"EQL",             ch:"W컨셉 / 온더룩",    tone:"warn"},
+        {v:"KREAM",           ch:"KREAM(크림)",      tone:"warn"},
+        {v:"온더룩",          ch:"W컨셉 / 온더룩",    tone:"warn"},
+        {v:"오늘의집",         ch:"오늘의집",          tone:"warn"},
+        {v:"쿠팡 로켓",        ch:"쿠팡 로켓배송",     tone:"danger"},
+        {v:"네이버 스마트스토어",ch:"네이버 스마트스토어",tone:"danger"},
+        {v:"카카오 선물하기",   ch:"카카오 선물하기",   tone:"danger"},
+        {v:"지그재그 직진배송", ch:"지그재그 직진배송",  tone:"danger"},
+        {v:"없음"} ] },
+
+    { group:"채널 · 모수", id:"monthly_orders", label:"월 주문건수 / 자사몰·외부 매출 비중", multi:false, prefill:false, q:"월 주문 건수랑 자사몰·외부 매출 비중은 어떻게 되세요?",
+      ask:"자사몰과 외부 플랫폼 매출 비중, 그리고 한 달 판매 건수는 대략 어느 정도 되실까요?",
+      options:[
+        {v:"월 100건 미만", tone:"warn"},
+        {v:"월 수백 건"},
+        {v:"월 수천 건"},
+        {v:"월 수만 건+"} ] },
+
+    { group:"시스템", id:"oms", label:"OMS 종류", multi:false, prefill:true, q:"주문은 어떤 OMS로 모아서 관리하세요?",
+      ask:"주문은 어떤 OMS로 모아서 관리하세요? 사방넷·이지어드민·셀메이트 중에 쓰시는지요.",
+      options:[
+        {v:"사방넷",       sys:"sabangnet"},
+        {v:"이지어드민",    sys:"ezadmin"},
+        {v:"셀메이트",      sys:"sellmate"},
+        {v:"플레이오토",    sys:"playauto"},
+        {v:"품고/아르고",   sys:"gpogo"},
+        {v:"없음"} ] },
+
+    { group:"시스템", id:"erp", label:"ERP 종류", multi:false, prefill:true, q:"ERP는 어떤 걸 쓰고 계세요?",
+      ask:"ERP는 따로 쓰고 계세요? 자체구축인지, SAP나 비즈패션·이카운트 같은 걸 쓰시는지 궁금합니다.",
+      options:[
+        {v:"자체구축 ERP",   sys:"custom_erp"},
+        {v:"SAP/그룹 전산",  sys:"sap"},
+        {v:"비즈패션",       sys:"bizfashion"},
+        {v:"이카운트",       sys:"ecount"},
+        {v:"세원ERP(SJ)",   sys:"sewon"},
+        {v:"디지패션",       sys:"digifashion"},
+        {v:"없음"} ] },
+
+    { group:"시스템", id:"fulfillment", label:"물류 관리주체", multi:false, prefill:false, q:"배송·물류는 직접 하세요, 3PL에 위탁하세요?",
+      hint:"3PL 위탁이면 데이터 권한이 3PL에 있어 양식 협의(코디네이션) 필요.",
+      ask:"배송·물류는 직접 하세요, 아니면 3PL에 위탁하세요? 위탁이면 고객 데이터 권한 협의가 필요해서요.",
+      options:[
+        {v:"브랜드 직접"},
+        {v:"3PL 위탁", sys:"thpl", tone:"warn"} ] },
+
+    { group:"시스템", id:"offline_pos", label:"오프라인 POS 수집 방식", multi:false, prefill:false, q:"오프라인 매장 POS는 뭘 쓰시고, 고객정보가 ERP로 넘어오나요?",
+      hint:"오프라인 매장이 있다면. 토스POS는 연동 사례 없음.",
+      ask:"오프라인 매장이 있으시면 POS는 뭘 쓰시고, 매장 고객 정보가 ERP로 넘어오는 구조인지 궁금합니다.",
+      options:[
+        {v:"POS→ERP 자동전송", sys:"pos_erp"},
+        {v:"토스POS",          sys:"tosspos", tone:"warn"},
+        {v:"이지체인",         sys:"pos_etc"},
+        {v:"페이히어",         sys:"pos_etc"},
+        {v:"QR/NFC 현장수집",  sys:"lounge"},
+        {v:"매장 없음"} ] },
+
+    { group:"운영 · 정책", id:"return_expr", label:"반품/교환 표현 방식", multi:false, prefill:false, q:"반품·교환 건은 데이터에서 어떻게 표시되나요?",
+      ask:"취소·반품·교환 건은 데이터에서 어떻게 표시되나요? 주문 상태값으로 구분되는지, 별도 탭에서 보셔야 하는지요.",
+      options:[
+        {v:"주문상태 컬럼 명확"},
+        {v:"주문탭 미반영(출고탭 매칭)", tone:"warn"},
+        {v:"비표준 상태값", tone:"warn"},
+        {v:"상태관리 안 됨(사방넷류)", tone:"warn"} ] },
+
+    { group:"세일즈 컨텍스트", id:"timing", label:"90일 내 타이밍 트리거", multi:true, prefill:true, q:"90일 안에 예정된 이벤트가 있으세요? (팝업·신규매장·리뉴얼 등)",
+      ask:"혹시 90일 안에 프로모션·팝업·신규매장·리뉴얼 같은 예정 이벤트가 있으실까요? 일정에 맞춰 도입 구성을 잡을 수 있어서요.",
+      options:[
+        {v:"광고 증액"},{v:"신규 매장 오픈"},{v:"리뉴얼/리브랜딩"},
+        {v:"자사몰 오픈"},{v:"ERP/전산 교체"},{v:"팝업·프로모션"},
+        {v:"없음/시기상조", tone:"warn"} ] },
+
+    { group:"세일즈 컨텍스트", id:"decision", label:"의사결정 직책", multi:false, prefill:true, q:"이 건은 보통 어느 분 선에서 결정되세요?",
+      hint:"결정권자인지 직접 묻지 말고 직책으로 판별.",
+      ask:"이 건은 보통 어느 분 선에서 결정이 되고, 그분은 어떤 숫자를 보시면 OK 하실까요?",
+      options:[
+        {v:"대표"},{v:"CMO/마케팅임원"},{v:"마케팅팀장"},
+        {v:"마케터/실무자", tone:"warn"},{v:"MD"},{v:"기타"} ] },
+
+    { group:"세일즈 컨텍스트", id:"paid_tool", label:"현행 유료 CRM/분석 툴", multi:false, prefill:true, q:"지금 쓰시는 유료 CRM이나 분석 툴이 있으세요?",
+      hint:"예산 간접신호. 직접 예산을 묻지 않는다.",
+      ask:"고객 데이터 관리나 CRM은 지금 어떻게 하세요? 따로 쓰시는 유료 툴이 있으신지요.",
+      options:[
+        {v:"채널톡"},{v:"빅인"},{v:"데이터라이즈"},{v:"대행사"},
+        {v:"내부 자체개발/검토중"},{v:"없음(수동 쿠폰)", tone:"warn"} ] },
+
+    // 콜이 아니라 제안서/온보딩 단계에서 확정할 항목 (stage:'proposal' → 콜 스크립트 제외, '콜 이후' 영역에 표시)
+    { group:"콜 이후 · 제안서 단계에서 확인", id:"issue_timing", label:"보증서 발급 시점", multi:false, prefill:false, stage:"proposal",
+      q:"보증서 발급 시점 (제안서 단계에서 확정)",
+      hint:"디커콜 마무리 후 제안서·온보딩에서 확정. 콜 스크립트에는 포함되지 않음.",
+      ask:"(제안서 단계) 보증서를 온라인은 출고 며칠 후, 오프라인은 매장 판매 즉시 발급하는 식인데 운영상 어느 쪽이 맞으실까요?",
+      options:[
+        {v:"온라인=출고후 N일"},
+        {v:"온라인=구매확정 즉시"},
+        {v:"오프라인=판매등록 즉시"},
+        {v:"배송완료 간주(수동업로드)"} ] },
+  ],
+
+  // 시스템별 룰 (그라운딩). mode: auto/batch/manual/build/coord
+  systems:{
+    cafe24:{name:"카페24",cat:"자사몰",mode:"auto",lead:"즉시(직연동)",
+      check:[{t:"호스팅이 카페24면 바로 직연동(개발 없이) 가능 구조로 안내",star:true}]},
+    shopify:{name:"쇼피파이",cat:"자사몰",mode:"auto",lead:"즉시(직연동)",check:[]},
+    makeshop:{name:"메이크샵",cat:"자사몰",mode:"manual",lead:"확인 안 됨",check:[]},
+    ownapp:{name:"자체 앱",cat:"자사몰",mode:"auto",lead:"확인 안 됨",check:[{t:"1st-party 로그인 기반 실연락처"}]},
+
+    sellmate:{name:"셀메이트",cat:"OMS",mode:"auto",lead:"1시간 단위 수집 연동 사례 있음(표준 수치 미확정)",
+      check:[
+        {t:"★재고매칭 컬럼 필수: 상품명=재고매칭(1)상품명, 옵션=재고매칭(1)옵션내용, 바코드=재고매칭(1)바코드(1:1 고유)",star:true},
+        {t:"★송장작업에 '재고매칭' 컬럼을 이미 쓰면 반드시 버클 담당자에 사전 공유(충돌 방지)",star:true},
+        {t:"★엑셀 추출 180일 한도 — 1년치는 01~06 / 07~12 분할",star:true},
+        {t:"세트상품은 '주문일련번호+품주일련번호'까지 넘겨야 상품별 발급"},
+        {t:"전화번호 주문자전화·주문자휴대폰 둘 다 포함(하나만 있을 수 있음)"},
+        {t:"약 200컬럼 중 '보증서 발급용(버클)' 양식 별도 생성 — 기존 양식으론 발급 불가"}]},
+    ezadmin:{name:"이지어드민",cat:"OMS",mode:"manual",lead:"확인 안 됨(가이드 미기재)",
+      check:[
+        {t:"★자동 API 연동 사례 없음 → 단기 수기 엑셀 → 중장기 API 2단계안 권고",star:true},
+        {t:"최근 3개월치만 다운로드 가능"},
+        {t:"확장주문검색→항목설정(주문자 휴대폰 71번 등 필수값)→상태=배송·정상만→상품단위 다운로드"},
+        {t:"29cm 한정 주문 전화번호는 이지어드민에서만 추출(플랫폼 admin엔 없음)"}]},
+    sabangnet:{name:"사방넷",cat:"OMS",mode:"manual",lead:"단기(엑셀 이관)",
+      check:[
+        {t:"★소급 가능 데이터 ≈ 3개월 한계 → 데이터 유실 전 빠른 이관, 소급발급 범위 사전 확인",star:true},
+        {t:"취소/교환/반품 상태관리가 안 돼 취소상품 보증서 오발급 위험"},
+        {t:"플랫폼 주문을 끌어와도 안심번호/마스킹만일 수 있음 → 헬스체크 권장"}]},
+    playauto:{name:"플레이오토",cat:"OMS",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"OMS 집계≠실연락처 보장 — 채널별 수집가능 여부 분리 점검"}]},
+    gpogo:{name:"품고/아르고",cat:"OMS",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"OMS 집계≠실연락처 보장 — 채널별 수집가능 여부 분리 점검"}]},
+
+    custom_erp:{name:"자체구축 ERP",cat:"ERP",mode:"auto",lead:"연동 개발 시 테스트 포함 약 2개월(일회성 500만~1,000만)",
+      check:[
+        {t:"★판별 기준은 '자체구축'이 아니라 '실연락처를 1st-party로 보유'(마스킹/안심번호면 ❌)",star:true},
+        {t:"표준 주문 API: orderer.name/phone, store.code/name Required=Y. 그 외 customField"},
+        {t:"상태 매핑: 판매=PURCHASE_DECIDED, 교환=EXCHANGE_DONE, 환불=RETURN_DONE"},
+        {t:"연동주기(실시간 vs 시간배치)·판매 시·분·초 전달은 협의 항목 — 콜에서 확정"}]},
+    bizfashion:{name:"비즈패션(이비즈웨이)",cat:"ERP",mode:"batch",lead:"정책결정 3일+사양 2일+개발 5~7일+테스트 3일+적용 1일",
+      check:[
+        {t:"★ERP 주문탭엔 반품/교환 미반영 → 주문(A)↔출고(B)↔반품의뢰(C) 교차 매칭 필수",star:true},
+        {t:"★발급시점: 온라인=출고완료 7일 후 예약 / 오프라인=판매등록 즉시(필수 선택)",star:true},
+        {t:"2개월 지나면 데이터 암호화(복호화 불가) → 소급발급 최근 2개월치만"},
+        {t:"연동범위=보증서 발급+취소만. 취소는 실시간. 단계별 매칭 절차는 운영 합의 후 문서화"}]},
+    sap:{name:"SAP / 그룹 전산",cat:"ERP",mode:"build",lead:"김(본사 승인·데이터 구조 복잡)",
+      check:[
+        {t:"★직접연동 대신 기술 컨설팅으로 전용 CDP 구축([구축형] Professional Fee)",star:true},
+        {t:"주문서 최종 집결지가 ERP인지(Source of Truth) 확인 / 본사 승인 필요"}]},
+    ecount:{name:"이카운트",cat:"ERP",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"★연동 사례 없음 → 수기 업로드 부담 → 2단계안 권고",star:true}]},
+    sewon:{name:"세원ERP(SJ)",cat:"ERP",mode:"build",lead:"확인 안 됨(별도 개발·미팅 진행)",
+      check:[{t:"데이터 다운로드가 아닌 API 연동 구조(SJ그룹 보증서·포인트·쿠폰). 디커콜상 Hard 분류",star:true}]},
+    digifashion:{name:"디지패션",cat:"ERP",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"디커콜상 Hard 분류 → 수기/협의 전제"}]},
+
+    thpl:{name:"3PL 위탁",cat:"특수",mode:"coord",lead:"김+ (양식 협의)",
+      check:[
+        {t:"★브랜드에 데이터 권한 없음 → 버클→브랜드→3PL 3단계 소통·양식 협의 후 전용 엑셀",star:true},
+        {t:"3PL이 OMS(이지어드민 등) 관리 시 브랜드가 양식 임의 변경 불가"}]},
+    pos_erp:{name:"오프라인 POS→ERP",cat:"POS",mode:"auto",lead:"중",
+      check:[
+        {t:"★POS→ERP 전송 구조·관리주체(브랜드 직접=즉시) 확인",star:true},
+        {t:"오프라인 과거 데이터엔 고객정보 없을 수 있음(수집 기능 도입 이후부터)"}]},
+    tosspos:{name:"토스POS",cat:"POS",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"★연동 불가 → 매장 보증서 발급(현장)으로 우회, 2단계안",star:true}]},
+    pos_etc:{name:"이지체인/페이히어",cat:"POS",mode:"manual",lead:"확인 안 됨",
+      check:[{t:"POS/ERP 연동 가능 여부가 옴니채널 도입 속도의 핵심 변수"}]},
+    lounge:{name:"QR/NFC 현장수집",cat:"POS",mode:"auto",lead:"중",
+      check:[{t:"'라운지 퍼스트' 현장 가입(O4O Engagement) — 매장에서 실연락처 수집"}]},
+  },
+
+  // 채널별 데이터 수집 가능성 (무신사 MFS 정책분석 2026-05-15 등). say = 콜에서 읽는 문장.
+  access:{
+    "무신사 (비MFS)":{lv:"warn",txt:"자체배송. 연락처 일부 제공 — 필드 단위는 헬스체크 권장",
+      say:"무신사는 자체배송이면 어드민에서 연락처를 일부만 받을 수 있어요(필드 단위는 확인이 필요합니다)."},
+    "무신사 MFS":{lv:"bad",txt:"풀필먼트. 브랜드가 고객 정보에 아예 미접촉 → 수집 불가",
+      say:"무신사 MFS(풀필먼트)는 브랜드가 고객 정보에 아예 닿지 않아 수집이 안 됩니다."},
+    "29CM":{lv:"warn",txt:"플랫폼 admin엔 전화번호 없음 → ERP/OMS에서만 실번호 추출",
+      say:"29CM는 플랫폼 어드민에 전화번호가 아예 없어서, 실고객은 OMS(이지어드민·사방넷 등)에서 받아야 합니다."},
+    "W컨셉 / 온더룩":{lv:"warn",txt:"OMS(이지어드민·사방넷 등) 경유 다운로드 권장",
+      say:"W컨셉·온더룩은 OMS를 경유해서 받는 걸 권장합니다."},
+    "KREAM(크림)":{lv:"warn",txt:"플랫폼 직다운보다 OMS 경유 권장(연락처 한계)",
+      say:"크림은 플랫폼 직다운보다 OMS 경유가 안전합니다(연락처에 한계가 있어서요)."},
+    "오늘의집":{lv:"warn",txt:"구매확정 후 90일 이내만 개인정보 확인 / 1회 5,000건 → 정기·분할 추출",
+      say:"오늘의집은 구매확정 후 90일 안에만 개인정보가 보여서, 정기·분할 추출로 설계해야 합니다."},
+    "쿠팡 로켓배송":{lv:"bad",txt:"안심번호만·데이터 비공개 → 수집 불가. 자사 전환 플로우 동반",
+      say:"쿠팡 로켓배송은 안심번호만 주고 데이터가 비공개라 수집이 안 됩니다."},
+    "네이버 스마트스토어":{lv:"bad",txt:"안심번호 제공 → CRM용 DB 미적재. 자사 채널 식별 전환 필요",
+      say:"네이버 스마트스토어는 안심번호만 와서 그대로는 CRM DB에 담기 어렵습니다."},
+    "카카오 선물하기":{lv:"bad",txt:"수신자 정보 없음 → 자사 접점에서 식별자 재생성해야 매칭",
+      say:"카카오 선물하기는 수신자 정보가 없어서, 자사 접점에서 식별자를 다시 받아야 매칭됩니다."},
+    "지그재그 직진배송":{lv:"bad",txt:"풀필먼트 통제 → 보증서 발급 불가",
+      say:"지그재그 직진배송은 풀필먼트라 보증서 발급이 안 됩니다."},
+  },
+};
+
+/* ---------- state ---------- */
+let PREFILL = {}; // Claude가 리드별로 덮어씀 (예: {owned_mall:"카페24", oms:"셀메이트", marketplace:["무신사 MFS","29CM"]})
+const state = {}; const source = {}; // source[id] = 'prefill' | 'click'
+
+function readHashPrefill(){
+  try{
+    const m = location.hash.match(/prefill=([^&]+)/);
+    if(m){ return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))); }
+  }catch(e){}
+  return null;
+}
+
+/* ---------- render fields ---------- */
+const fieldsEl = document.getElementById('fields');
+function render(){
+  const groups = {};
+  RULESET.fields.forEach(f=>{ (groups[f.group] = groups[f.group]||[]).push(f); });
+  fieldsEl.innerHTML = '';
+  Object.entries(groups).forEach(([gname, fs])=>{
+    const g = document.createElement('div'); g.className='group';
+    const isNext = fs.some(f=>f.stage==='proposal');
+    g.innerHTML = `<div class="group-h${isNext?' next-h':''}">${gname}</div>`;
+    const grid = document.createElement('div'); grid.className='grid';
+    fs.forEach(f=>grid.appendChild(card(f)));
+    g.appendChild(grid); fieldsEl.appendChild(g);
+  });
+  updateStatus();
+}
+function isSet(f){ const v=state[f.id]; return f.multi ? (v&&v.length) : (v!=null&&v!==''); }
+function card(f){
+  const el = document.createElement('div'); el.className='card';
+  if(f.stage==='proposal') el.classList.add('proposal');
+  if(isSet(f)) el.classList.add(source[f.id]==='prefill'?'prefilled':'filled');
+  const badge = !isSet(f) ? '' : (source[f.id]==='prefill'
+      ? '<span class="badge pre">✓</span>' : '<span class="badge ask">●</span>');
+  let h = `<div class="card-top"><span class="card-label">${f.q||f.label}</span>${badge}</div>`;
+  if(f.hint) h += `<div class="card-hint">${f.hint}</div>`;
+  h += '<div class="chips">';
+  f.options.forEach(o=>{
+    const on = f.multi ? (state[f.id]||[]).includes(o.v) : state[f.id]===o.v;
+    const tone = o.tone ? (o.tone==='danger'?'danger':'warn') : '';
+    h += `<button class="chip ${tone} ${on?'on':''}" data-f="${f.id}" data-v="${o.v}">${o.v}</button>`;
+  });
+  h += '</div>';
+  el.innerHTML = h;
+  el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>toggle(f, c.dataset.v)));
+  return el;
+}
+function toggle(f, v){
+  if(f.multi){
+    let arr = state[f.id] ? [...state[f.id]] : [];
+    if(arr.includes(v)){ arr = arr.filter(x=>x!==v); } else { arr.push(v); }
+    state[f.id] = arr.length?arr:undefined;
+  } else {
+    state[f.id] = (state[f.id]===v) ? undefined : v;
+  }
+  source[f.id] = isSet(f) ? 'click' : undefined; // 클릭하면 사전조사 덮어씀
+  render();
+  if(document.getElementById('drawer').classList.contains('open')) renderDrawer();
+}
+
+/* ---------- status ---------- */
+function updateStatus(){
+  const total = RULESET.fields.length;
+  const done = RULESET.fields.filter(isSet).length;
+  document.getElementById('counter').textContent = `${done} / ${total} 확정`;
+  const remain = total-done;
+  document.getElementById('barStatus').innerHTML = done===0 ? '선택을 시작하세요'
+    : `<b>${done}</b>개 확정 · 남은 칸 ${remain}개`;
+  document.getElementById('okBtn').disabled = done===0;
+}
+
+/* ============================================================
+   결과 로직
+   ============================================================ */
+function selSystems(){
+  const keys = new Set();
+  RULESET.fields.forEach(f=>{
+    const v = state[f.id]; if(!v) return;
+    const vals = f.multi ? v : [v];
+    f.options.forEach(o=>{ if(o.sys && vals.includes(o.v)) keys.add(o.sys); });
+  });
+  return [...keys].map(k=>({key:k,...RULESET.systems[k]}));
+}
+function selMarketChannels(){
+  const f = RULESET.fields.find(x=>x.id==='marketplace');
+  const vals = state.marketplace||[];
+  const chs = new Set();
+  f.options.forEach(o=>{ if(o.ch && vals.includes(o.v)) chs.add(o.ch); });
+  return [...chs];
+}
+function modeRank(m){ return {coord:5,build:4,manual:3,batch:2,auto:1}[m]||0; }
+const MODE_LABEL = {auto:["자동연동","auto"],batch:["배치·스케줄러","manual"],manual:["수기 엑셀","manual"],build:["구축형","build"],coord:["코디네이션","coord"]};
+
+function classifyForm(){
+  const sys = selSystems();
+  const has = k => sys.some(s=>s.key===k);
+  if(has('sap')) return "오프라인·대형/글로벌 (자체 ERP/그룹 전산)";
+  if(has('thpl')) return "특수 — 3PL 위탁(브랜드 데이터 권한 없음)";
+  const offline = ['pos_erp','tosspos','pos_etc','lounge'].some(has);
+  if(offline && (has('sap')||sys.filter(s=>s.cat==='POS').length)) {}
+  if(has('sabangnet')) return "온라인·통합관리형 (사방넷)";
+  if(has('sellmate')||has('ezadmin')||has('cafe24')||has('shopify')) return "온라인·SaaS형 (커머스 호스팅/SaaS OMS)";
+  if(offline) return "오프라인·유통망 (매장+POS)";
+  if(has('custom_erp')||has('bizfashion')||has('ecount')||has('sewon')||has('digifashion')) return "ERP형 (자체/패키지 ERP)";
+  return "확인 필요 — 시스템 정보 부족";
+}
+function recommendCollection(){
+  const sys = selSystems();
+  if(!sys.length) return {label:"확인 필요",cls:"manual",note:"시스템을 먼저 선택하세요."};
+  const binding = sys.reduce((a,b)=>modeRank(b.mode)>modeRank(a.mode)?b:a);
+  const [label,cls] = MODE_LABEL[binding.mode];
+  let note="";
+  if(binding.mode==='build') note="직접연동 대신 기술 컨설팅으로 전용 CDP 구축. 본사 승인·리드타임 길게.";
+  else if(binding.mode==='coord') note="버클→브랜드→3PL 3단계 양식 협의 후 전용 엑셀. 리드타임 길게.";
+  else if(binding.mode==='manual'||binding.mode==='batch') note="연동 사례 없거나 배치형 → 단기 수기 엑셀 → 중장기 API 2단계 운영안으로 마찰 완화.";
+  else note="직연동 가능 → 개발 없이(또는 짧은 연동) 실시간 수집·자동 보증서 발급.";
+  return {label:`[${label}] ${binding.name} 기준`,cls,note};
+}
+function fitEval(){
+  const sys = selSystems();
+  const has = k => sys.some(s=>s.key===k);
+  const reasons=[]; let bucket="🔶 추가 확인 필요"; let cls="manual";
+  const chs = selMarketChannels();
+  const badCh = chs.filter(c=>RULESET.access[c]&&RULESET.access[c].lv==='bad');
+  const noMall = state.owned_mall==='없음';
+  const lowVol = state.monthly_orders==='월 100건 미만';
+  const noTrigger = (state.timing||[]).includes('없음/시기상조');
+  const hasTrigger = (state.timing||[]).some(t=>t!=='없음/시기상조');
+
+  if(noMall && badCh.length && !chs.some(c=>RULESET.access[c]&&RULESET.access[c].lv!=='bad')){
+    bucket="❌ 구조적 불일치 (확인)"; cls="coord";
+    reasons.push("자사몰 없음 + 외부 플랫폼(마스킹) 중심. 자사 전환 계획이 없으면 수집 자체가 막힘.");
+  } else if(has('sap')){
+    bucket="🔶① 대기업/해외 본사"; cls="build";
+    reasons.push("자체 ERP(SAP)/그룹 전산 → 구축형·리드타임 길게. 레퍼런스: 대형 글로벌 브랜드(노션 ROAS 아카이브로 검증 후 인용).");
+  } else if(lowVol || (has('sabangnet')&&noMall)){
+    bucket="🔶③ 볼륨 부족"; cls="manual";
+    reasons.push("월 100건 미만/연 1~2천 또는 입점몰 비중 압도적·소급 데이터 적음 → ROI 가시화 늦음.");
+  } else if(state.erp==='ERP/전산 교체'||noTrigger){
+    bucket="🔶② 타이밍 대기"; cls="manual";
+    reasons.push("트리거(전산교체/자사몰 오픈) 해소 여부 확정 필요.");
+  }
+  if(hasTrigger){ reasons.push(`타이밍 트리거(${(state.timing||[]).filter(t=>t!=='없음/시기상조').join('·')}) → 도입 역산 클로징 긍정 신호.`); }
+
+  // CRM 니즈/유료툴 → 승급
+  if(state.paid_tool && state.paid_tool!=='없음(수동 쿠폰)' && bucket.includes('🔶')){
+    reasons.push("유료 CRM/분석 툴 사용 = 지불의향·데이터 확장 니즈 → ✅ 승급 가능(콜에서 CRM 니즈 확인).");
+  }
+  // 1st-party 실연락처 보유 신호 → 우호 (그라운딩: 이지어드민·셀메이트 OMS는 마스킹 우회·실번호 추출 / 비즈패션 ordererTel 실연락처)
+  const realContact = (state.owned_mall && state.owned_mall!=='없음')
+    || ['pos_erp','lounge','custom_erp','sellmate','bizfashion','ezadmin'].some(has);
+  if(realContact){
+    // 강한 1st-party가 있으면 단일 ❌채널(예: 일부 MFS)만으로 ✅를 막지 않음. 자사몰 전무+전채널 마스킹은 위 ❌에서 이미 처리.
+    if(!has('sap') && !lowVol && bucket==="🔶 추가 확인 필요"){
+      bucket="✅ 핏 우호적 (확인)"; cls="auto";
+    }
+    reasons.push("자사몰/오프라인/자체ERP·OMS로 1st-party 실연락처 보유 → 즉시 구축 명분. (단 실데이터가 플랫폼발 마스킹이면 ❌)");
+    if(badCh.length) reasons.push(`다만 ${badCh.join('·')} 채널 매출분은 수집 불가 → 그 비중은 자사 전환 플로우로 별도 설계.`);
+  }
+
+  // 역ICP 게이트
+  const reverse=[];
+  if(noMall && badCh.length) reverse.push("플랫폼 락인(MFS·로켓·스마트스토어·선물하기)+전환 의지 낮음");
+  if(state.decision==='마케터/실무자') reverse.push("실무자 컨택 → 윗선 설득 ROI 자료 필요(정체 위험)");
+  if(state.paid_tool==='없음(수동 쿠폰)' && lowVol) reverse.push("CRM 인지 낮음+모수 작음 → 즉효 어려움");
+  return {bucket,cls,reasons,reverse,badCh,chs};
+}
+
+/* ---------- 콜 스크립트 블록 (트리거) ---------- */
+// (시스템 기술 특징은 콜 스크립트에서 읽지 않고 브리프 '온보딩 체크포인트'(RULESET.systems[].check)에 둔다.)
+function scriptBlocks(){
+  const sys = selSystems(); const has=k=>sys.some(s=>s.key===k);
+  const chs = selMarketChannels();
+  const masked = chs.filter(c=>RULESET.access[c]);
+  const badCh = masked.filter(c=>RULESET.access[c].lv==='bad');
+  const hasOwnMall = state.owned_mall && state.owned_mall!=='없음';
+  const ext = (state.marketplace||[]).filter(v=>v!=='없음');
+  const hasOffline = ['pos_erp','tosspos','pos_etc','lounge'].some(has) || (state.offline_pos && state.offline_pos!=='매장 없음');
+  const mNames = arr=>arr.map(c=>c.replace(/\s*\(.*\)/,'')).join('·');           // 채널명 읽기용(괄호 제거)
+  const chList = arr=>arr.length<=3 ? mNames(arr) : mNames(arr.slice(0,2))+` 등 ${arr.length}곳`; // 길면 축약
+  const setup = ()=>{                                                            // 채널 많으면 나열 대신 'N곳' 카운트 요약
+    const sn=[]; if(state.oms&&state.oms!=='없음') sn.push(state.oms); if(state.erp&&state.erp!=='없음') sn.push(state.erp);
+    const p=[];
+    if(ext.length>=4){
+      const t=[]; if(hasOwnMall) t.push('자사몰'); t.push('외부몰'); if(hasOffline) t.push('오프라인 매장');
+      const n=(hasOwnMall?1:0)+ext.length+(hasOffline?1:0);
+      p.push(`${t.join('·')} 합쳐 ${n}곳에서 판매 중`);
+    } else {
+      if(hasOwnMall) p.push(`자사몰(${state.owned_mall})`);
+      if(ext.length) p.push(`${ext.join('·')} 입점`);
+      if(hasOffline) p.push('오프라인 매장 운영');
+    }
+    if(sn.length) p.push(`${sn.join('·')} 사용`);
+    return p.length ? p.join(', ')+' 상황' : '말씀해주신 상황'; };
+  const B=[]; const add=(n,when,ment)=>B.push({n,when,ment});
+
+  // 오프닝 / 직책 / 정의
+  if(state.decision) add("0","직책 확인",`(결정권자인지 직접 묻지 말고) 이 건은 보통 어느 분 선에서 결정되고, 그분은 어떤 숫자를 보시면 OK 하실까요? — 현재 <em>${state.decision}</em> 응대.`);
+  add("1","오프닝","대표님, 남겨주신 문의 잘 확인했습니다. 가장 중요한 고객 데이터가 지금 어떤 구조로 흩어져 있는지 먼저 짚어보면 정확한 방향을 잡아드릴 수 있어요. 1분만 버클이 뭘 하는지부터 짧게 설명드릴게요.");
+  add("2","버클 한줄정의","버클은 크게 둘을 합니다. 첫째 <em>디지털 보증서</em>로 흩어진 구매 고객을 자동으로 식별·수집하고, 둘째 <em>카카오 CRM</em>으로 재구매를 만듭니다. 가장 큰 문제는 '외부에서 산 고객이 누구인지 모른다'는 점인데, 보증서가 그 첫 단추예요.");
+  if(!isSetId('monthly_orders')) add("3","채널·모수 질문",ask('monthly_orders'));
+  if(!isSetId('oms')&&!isSetId('erp')) add("3","취합 방식 질문","외부 플랫폼 고객 정보는 지금 어떤 방식으로 취합하세요? OMS(사방넷·이지어드민·셀메이트)인지, ERP/POS가 따로 있는지요.");
+
+  // ── 선택지별 (이런 어려움이 있었을 것 → 버클은 이렇게 해결) 페어 생성. 모든 선택사항을 그라운딩대로 커버 ──
+  const recoverable = masked.filter(c=>RULESET.access[c].lv==='warn'); // 어드민엔 빠지지만 OMS 경유 가능(수기·기간 제한)
+  const hasOMS = state.oms && state.oms!=='없음';
+  const manualSys = sys.filter(s=>s.mode==='manual').map(s=>s.name);   // 연동 사례 없는 수기 시스템
+  const concerns=[]; // {pain, fix}
+
+  if(badCh.length) concerns.push({
+    pain:`${chList(badCh)}에서 산 고객은 플랫폼이 안심번호만 내줘서, OMS·ERP로 끌어오셔도 실번호가 없어 마케팅에 쓰기 어렵습니다`,
+    fix:`${chList(badCh)}처럼 지금은 받을 길이 없던 고객도 보증서 등록을 유도해 자사 접점에서 식별하는 구조를 만들 수 있습니다`});
+  if(recoverable.length) concerns.push({
+    pain: hasOMS
+      ? `${chList(recoverable)} 고객은 어드민에선 번호가 빠지거나 기간 제한이 걸려서, ${state.oms} 같은 OMS에서 그때그때 수기로 추출·정리하셔야 하는 번거로움이 있습니다`
+      : `${chList(recoverable)} 고객은 어드민에선 번호가 빠지거나 기간 제한이 걸려서, 따로 받아오는 경로가 없으면 실고객을 모으기 번거롭습니다`,
+    fix:`${chList(recoverable)}처럼 OMS에서 일일이 빼내시던 데이터도 보증서 발급 시점에 자동으로 한 곳에 모입니다`});
+  if(has('thpl')) concerns.push({
+    pain:`물류를 3PL에 위탁하고 계셔서 고객 데이터 권한이 3PL에 있다 보니, 구매자 명단을 직접 받아 마케팅에 활용하기 어려우셨을 것 같습니다`,
+    fix:`버클이 3PL과 데이터 양식을 협의해(버클→브랜드→3PL) 전용 파일로 받아오고, 보증서를 기준으로 한 곳에 통합해 드립니다`});
+  if(has('sap')||has('sewon')) concerns.push({
+    pain:`본사·그룹 전산을 쓰셔서 외부 도구와 직접 연동이 까다롭고, 데이터 한 번 빼는 데도 승인·개발이 필요해 시간이 걸리셨을 겁니다`,
+    fix:`직접 연동 대신 본사 승인 범위에 맞춘 전용 CDP를 구축하는 방식으로, 무리 없이 데이터를 모으도록 설계합니다`});
+  if(manualSys.length) concerns.push({
+    pain:`${chList(manualSys)}은 아직 자동 연동 사례가 없어, 그동안 주문 데이터를 직접 엑셀로 내려받아 정리하시느라 손이 많이 가셨을 겁니다`,
+    fix:`초기엔 그 엑셀을 그대로 올리면 바로 적재되고(수기 업로드 지원), 중장기엔 API 연동으로 자동화하는 2단계로 부담을 줄입니다`});
+  if(has('bizfashion') || (state.return_expr && state.return_expr!=='주문상태 컬럼 명확')) concerns.push({
+    pain:`반품·교환이 주문 상태로 깔끔하게 안 잡혀서, 취소된 건까지 섞여 정확한 구매 고객만 추리기 번거로우셨을 겁니다`,
+    fix:`주문·출고(필요하면 반품의뢰)를 매칭해 실제 구매만 추려, 취소·반품 고객에게 보증서가 잘못 나가지 않게 합니다`});
+  if(hasOffline) concerns.push({
+    pain:`매장에서 산 고객은 정보가 잘 안 남아, 재방문을 유도할 방법이 마땅치 않으셨을 겁니다`,
+    fix:`매장에선 QR·NFC로 그 자리에서 라운지 가입을 받아 방문객·구매 고객을 현장에서 바로 식별합니다`});
+  if(state.monthly_orders==='월 100건 미만') concerns.push({
+    pain:`월 주문 수가 많지 않아, 지금 모수만으로는 마케팅 효과를 체감하기까지 시간이 걸릴 수 있습니다`,
+    fix:`기존 구매 고객 소급 발급으로 초기 모수를 한 번에 키우고, 라운지로 잠재고객까지 더해 효과가 빨리 보이도록 합니다`});
+  if(!concerns.length && hasOwnMall) concerns.push({
+    pain:`자사몰 고객은 모이지만, 한 번 산 분을 다시 부르거나 VIP를 따로 관리하는 자동화는 아직 손이 덜 가셨을 수 있습니다`,
+    fix:`보증서를 기준으로 구매 데이터가 자동 통합돼 VIP·이탈·재구매 관리를 자동화할 수 있습니다`});
+  if(!concerns.length) concerns.push({
+    pain:`구매 고객이 채널마다 흩어져 한 사람으로 묶이지 않습니다`,
+    fix:`보증서로 어디서 샀든 한 사람으로 식별·통합해 드립니다`});
+
+  add("진단","현재 — 이런 점이 어려우셨을 거예요",`지금 ${setup()}을 보면, ${concerns.map(c=>c.pain).join('. 그리고 ')}. 그러다 보니 마케팅 비용은 비용대로 드는데 시도도 조심스럽고, 성과도 기대만큼 안 나오셨던 경험이 있으실 것 같아요.`);
+
+  let fix = `버클을 쓰면 이렇게 흩어진 구매 고객을 디지털 보증서로 식별해서, <em>실제로 산 고객과 아직 안 산 잠재 고객을 나눠</em> 마케팅할 수 있게 됩니다. 어디서 샀든 보증서를 발급하는 순간 그 고객이 브랜드 멤버가 되고, 자사몰 재구매로 이어지는 라인이 생깁니다.`;
+  fix += ` 특히 ${concerns.map(c=>c.fix).join('. ')}.`;
+  add("효과","버클 도입 시 — 이렇게 달라집니다", fix);
+
+  // ── 라운지 퍼스트: 주문고객 → 잠재고객까지 모수 확장 (오프라인 현장수집은 위 오프라인 항목에서 다룸) ──
+  add("라운지 퍼스트","잠재고객까지 — 모수를 키우는 방향",`여기서 한 발 더 나아가, 보증서로 '이미 산' 고객만 모으는 데서 그치지 않고 <em>브랜드 라운지</em>로 아직 구매하지 않은 잠재 고객 데이터까지 모을 수 있어서, 마케팅 가능한 모수 자체가 커집니다. 기존 구매 고객에게 보증서를 소급 발급하면, 지금 카톡 친구이긴 한데 누군지 모르던 분들까지 한 번에 식별·연결됩니다.`);
+
+  // ── 데이터로 보이는 것 ──
+  add("4","데이터로 보이는 것","고객+구매가 자동 통합되면 VIP가 어디서 나오는지·핵심 상품·성장 채널이 바로 보입니다. 확장에서 가장 중요한 '데이터 기반 의사결정'이 가능해지는 거죠.");
+
+  // ── CRM 효과 + 비용 효율 + 유료툴(예산 신호) ──
+  let crm = `식별된 고객에게 브랜드메시지·친구톡·문자로 재구매·신상품·이탈방지를 자동화합니다. 살 사람한테만 보내니 불특정 다수에 뿌리던 비용이 줄고 ROAS가 올라가는 구조예요.`;
+  if(isSetId('paid_tool')) crm += state.paid_tool==='없음(수동 쿠폰)' ? ` 지금은 수동 쿠폰 수준이라 식별 마케팅으로 얻는 게 특히 클 겁니다.` : ` ${state.paid_tool} 쓰고 계시면, 식별 데이터를 얹어 같은 비용으로 더 정밀하게 돌릴 수 있습니다.`;
+  else crm += ` 고객 데이터 관리는 지금 어떻게 하세요? 따로 쓰시는 유료 툴이 있으신지요.`;
+  add("5","CRM + 비용 효율", crm);
+
+  // ── 클로징 + 비가역성/타이밍 ──
+  const trig=(state.timing||[]).filter(t=>t!=='없음/시기상조');
+  const coreGap = badCh.length ? '플랫폼에서 산 고객이 누구인지 모르는 점' : recoverable.length ? '플랫폼 고객을 일일이 수기로 모아야 하는 점' : hasOffline ? '온·오프라인 고객이 따로 노는 점' : '구매 고객이 흩어져 재구매 자산이 안 쌓이는 점';
+  let close = `정리하면 지금 ${coreGap}을 버클로 식별·재구매까지 연결하는 그림입니다. 구성안을 솔루션 제안 / 소개서 / 미팅 중 하나로 이어가면 좋겠습니다. 보증서·CRM은 데이터가 쌓일수록 효과가 커져서, 지금 시작하면 3개월 뒤엔 '우리 고객이 누구인지'가 데이터로 남지만 늦게 시작하면 그 기간은 되돌릴 수 없습니다.`;
+  if(trig.length) close += ` 마침 ${trig.join('·')} 일정이 있으니 거기에 맞춰 역산해 잡겠습니다.`;
+  add("7","클로징", close);
+
+  return B;
+}
+function isSetId(id){ const f=RULESET.fields.find(x=>x.id===id); return f&&isSet(f); }
+function ask(id){ const f=RULESET.fields.find(x=>x.id===id); return f?f.ask:''; }
+
+/* ---------- drawer render ---------- */
+let curTab='script';
+function renderDrawer(){
+  document.getElementById('drSub').textContent = (document.getElementById('brandName').value||'(브랜드)') + ' · ' + new Date().toLocaleDateString('ko-KR');
+  const body = document.getElementById('drBody');
+  body.innerHTML = curTab==='script' ? scriptHTML() : briefHTML();
+}
+function scriptHTML(){
+  const B = scriptBlocks();
+  let h='';
+  B.forEach(b=>{
+    const lbl = /^\d/.test(b.n) ? `STEP ${b.n}` : b.n;
+    h += `<div class="scriptblk"><div class="sb-when"><span class="num">${lbl}</span>${b.when}</div><div class="sb-ment">${b.ment}</div></div>`;
+  });
+  // 콜에서 더 확인할 질문 (콜 단계 미선택 항목만)
+  const remain = RULESET.fields.filter(f=>!isSet(f) && f.stage!=='proposal');
+  if(remain.length){
+    h += `<div class="brief-h" style="margin-top:18px;">콜에서 더 확인할 질문 (${remain.length})</div>`;
+    remain.forEach(f=>{ h += `<div class="ask-line"><span class="q">${f.label}</span>${f.ask}</div>`; });
+  }
+  // 콜 이후 · 제안서 단계에서 확인 (콜 스크립트엔 안 들어가는 항목)
+  const prop = RULESET.fields.filter(f=>f.stage==='proposal');
+  if(prop.length){
+    h += `<div class="brief-h" style="margin-top:18px;">📋 콜 이후 · 제안서 단계에서 확인</div>`;
+    prop.forEach(f=>{
+      const val = isSet(f) ? (f.multi?state[f.id].join(', '):state[f.id]) : null;
+      h += `<div class="ask-line next"><span class="q">${f.label}${val?` — <b>${val}</b>`:' (콜 후 확정)'}</span>${f.ask}</div>`;
+    });
+  }
+  return h;
+}
+function briefHTML(){
+  const form=classifyForm(), col=recommendCollection(), fit=fitEval();
+  const sys=selSystems();
+  let h='';
+  // 형태 + 수집방식
+  h += `<div class="brief-sec"><div class="brief-h">인프라 형태 · 추천 수집방식</div>`;
+  h += `<div class="kv"><div class="big">${form}</div><p><b>${col.label.replace(/\[(.+?)\]/,'<span class="tag '+col.cls+'">$1</span>')}</b><br>${col.note}</p></div></div>`;
+  // 채널 수집가능성
+  if(fit.chs.length){
+    h += `<div class="brief-sec"><div class="brief-h">채널별 데이터 수집 가능성</div><div class="access">`;
+    fit.chs.forEach(c=>{
+      const a=RULESET.access[c]; const mk=a.lv==='bad'?'❌':a.lv==='warn'?'⚠️':'✅';
+      h += `<div class="arow"><span class="mk">${mk}</span><div><span class="ch">${c}</span><div class="note">${a.txt}</div></div></div>`;
+    });
+    h += `</div>`;
+    if(fit.badCh.length) h += `<div class="warnbox"><b>★ 공통 경고</b> — ${fit.badCh.join('·')}는 플랫폼이 개인정보 수집 법적 주체라, <b>ERP·OMS로 끌어와도 안심번호/마스킹만</b> 들어옵니다. 연동이 우회로가 못 됩니다 → 자사 전환 플로우 동반 필수.</div>`;
+    h += `</div>`;
+  }
+  // 시스템 주의사항
+  if(sys.length){
+    h += `<div class="brief-sec"><div class="brief-h">시스템별 온보딩 체크포인트 <span style="font-weight:500;text-transform:none;color:#9a9aa0;">(제안·연동 단계 참고 — 콜에선 안 읽음)</span></div>`;
+    sys.forEach(s=>{
+      if(!s.check||!s.check.length) return;
+      const star = s.check.some(c=>c.star);
+      h += `<div class="caution ${star?'star':''}"><div class="sys">${s.name} <span style="font-weight:500;color:var(--fine);">· ${s.cat} · 리드타임 ${s.lead}</span></div><ul>`;
+      s.check.forEach(c=>{ h += `<li class="${c.star?'star':''}">${c.t}</li>`; });
+      h += `</ul></div>`;
+    });
+    h += `</div>`;
+  }
+  // 핏
+  h += `<div class="brief-sec"><div class="brief-h">핏 2차 스코어링</div>`;
+  h += `<div class="kv"><span class="fit-badge tag ${fit.cls}">${fit.bucket}</span><p>${fit.reasons.map(r=>'· '+r).join('<br>')||'추가 정보 필요'}</p></div>`;
+  if(fit.reverse.length) h += `<div class="warnbox"><b>역ICP 게이트</b><br>${fit.reverse.map(r=>'· '+r).join('<br>')}</div>`;
+  h += `</div>`;
+  h += `<div class="src">최상위 판별 = '실연락처를 브랜드가 1st-party로 보유하는가'. 자체ERP·OMS라도 실데이터가 플랫폼발 마스킹이면 ❌. · 레퍼런스 고유명/수치는 고객 대면 인용 전 노션 ROAS 아카이브로 검증. · 출처: integration/playbook.md + 노션 8개 소스(2026-05~06).</div>`;
+  return h;
+}
+
+/* ---------- markdown export ---------- */
+function toMarkdown(){
+  const brand=document.getElementById('brandName').value||'(브랜드)';
+  const form=classifyForm(), col=recommendCollection(), fit=fitEval(), sys=selSystems();
+  let m=`# 디커콜 스코핑 — ${brand}\n_${new Date().toLocaleDateString('ko-KR')} · 버클 디커콜 스코퍼_\n\n`;
+  m+=`## 선택 요약\n`;
+  RULESET.fields.forEach(f=>{ if(isSet(f)){ const v=f.multi?state[f.id].join(', '):state[f.id]; m+=`- ${f.label}: ${v} ${source[f.id]==='prefill'?'(사전조사)':''}\n`; }});
+  m+=`\n## 제안 방향\n- 인프라 형태: **${form}**\n- 추천 수집방식: **${col.label}** — ${col.note}\n`;
+  if(fit.chs.length){ m+=`\n## 채널별 데이터 수집 가능성\n`; fit.chs.forEach(c=>{const a=RULESET.access[c];const mk=a.lv==='bad'?'❌':a.lv==='warn'?'⚠️':'✅';m+=`- ${mk} ${c} — ${a.txt}\n`;}); if(fit.badCh.length) m+=`- ★ 공통경고: ${fit.badCh.join('·')}는 ERP/OMS로도 마스킹만 → 자사 전환 동반 필수\n`; }
+  if(sys.length){ m+=`\n## 시스템별 주의사항\n`; sys.forEach(s=>{ if(s.check&&s.check.length){ m+=`### ${s.name} (${s.cat} · 리드타임 ${s.lead})\n`; s.check.forEach(c=>m+=`- ${c.t}\n`); }}); }
+  m+=`\n## 핏 2차 스코어링\n- **${fit.bucket}**\n`; fit.reasons.forEach(r=>m+=`- ${r}\n`); if(fit.reverse.length){m+=`- 역ICP: ${fit.reverse.join(' / ')}\n`;}
+  m+=`\n## 콜 스크립트\n`;
+  scriptBlocks().forEach(b=>{ m+=`**[STEP ${b.n}] ${b.when}**\n> ${b.ment.replace(/<\/?em>/g,'').replace(/<br>/g,' ')}\n\n`; });
+  const remain=RULESET.fields.filter(f=>!isSet(f) && f.stage!=='proposal');
+  if(remain.length){ m+=`## 콜에서 더 확인할 질문\n`; remain.forEach(f=>m+=`- (${f.label}) ${f.ask}\n`); }
+  const prop=RULESET.fields.filter(f=>f.stage==='proposal');
+  if(prop.length){ m+=`\n## 콜 이후 · 제안서 단계에서 확인\n`; prop.forEach(f=>{ const v=isSet(f)?(f.multi?state[f.id].join(', '):state[f.id]):'콜 후 확정'; m+=`- ${f.label}: ${v}\n`; }); }
+  m+=`\n---\n_출처: vircle-wiki integration/playbook.md + 노션 8개 소스. 레퍼런스 수치는 ROAS 아카이브로 검증 후 인용._\n`;
+  return m;
+}
+
+/* ---------- events ---------- */
+const drawer=document.getElementById('drawer'), scrim=document.getElementById('scrim');
+function openDrawer(){ renderDrawer(); drawer.classList.add('open'); scrim.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+document.getElementById('okBtn').addEventListener('click',openDrawer);
+document.getElementById('drX').addEventListener('click',closeDrawer);
+scrim.addEventListener('click',closeDrawer);
+document.querySelectorAll('.dr-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.dr-tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+  curTab=t.dataset.tab; document.getElementById('drTitle').textContent = curTab==='script'?'제안 스크립트':'제안 브리프'; renderDrawer();
+}));
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  RULESET.fields.forEach(f=>{state[f.id]=undefined;source[f.id]=undefined;}); render(); closeDrawer();
+});
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  navigator.clipboard.writeText(toMarkdown()).then(()=>toast('복사됐어요 — 노션·슬랙에 붙여넣기'));
+});
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1900); }
+
+/* ---------- init: prefill ---------- */
+(function init(){
+  const hp = readHashPrefill(); const pf = hp || PREFILL || {};
+  if(pf.__brand) document.getElementById('brandName').value = pf.__brand;
+  RULESET.fields.forEach(f=>{
+    if(pf[f.id]!=null){ state[f.id]=pf[f.id]; source[f.id]='prefill'; }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
