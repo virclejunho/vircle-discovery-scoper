@@ -99,6 +99,11 @@
   .sb-when .num{background:var(--primary-soft);color:var(--primary);border-radius:6px;padding:1px 6px;font-size:10.5px;}
   .sb-ment{font-size:15px;line-height:1.62;color:var(--ink);letter-spacing:-.01em;}
   .sb-ment em{font-style:normal;background:linear-gradient(180deg,transparent 62%,#fff2a8 62%);font-weight:600;}
+  .sb-ment ul{margin:10px 0 6px;padding:0;list-style:none;}
+  .sb-ment li{position:relative;padding-left:17px;margin-bottom:8px;line-height:1.5;}
+  .sb-ment li:last-child{margin-bottom:2px;}
+  .sb-ment li:before{content:'·';position:absolute;left:3px;top:-1px;color:var(--primary);font-weight:800;font-size:17px;}
+  .sb-lead{display:block;margin-bottom:2px;}
   .ask-line{background:var(--primary-soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14.5px;line-height:1.55;color:#0a4a8f;}
   .ask-line .q{font-weight:700;font-size:11px;color:var(--primary);display:block;margin-bottom:4px;letter-spacing:.02em;}
   .ask-line.next{background:#f4f1fb;color:#4a3d7a;}
@@ -672,11 +677,11 @@ function scriptBlocks(){
     pain:`구매 고객이 채널마다 흩어져 한 사람으로 묶이지 않습니다`,
     fix:`보증서로 어디서 샀든 한 사람으로 식별·통합해 드립니다`});
 
-  add("진단","현재 — 이런 점이 어려우셨을 거예요",`지금 ${setup()}을 보면, ${concerns.map(c=>c.pain).join('. 그리고 ')}. 그러다 보니 마케팅 비용은 비용대로 드는데 시도도 조심스럽고, 성과도 기대만큼 안 나오셨던 경험이 있으실 것 같아요.`);
+  add("진단","현재 — 이런 점이 어려우셨을 거예요",
+    `<span class="sb-lead">지금 ${setup()}을 보면, 이런 점들이 걸리실 것 같아요:</span><ul>${concerns.map(c=>`<li>${c.pain}.</li>`).join('')}</ul>그러다 보니 마케팅 비용은 비용대로 드는데 시도도 조심스럽고, 성과도 기대만큼 안 나오셨던 경험이 있으실 것 같아요.`);
 
-  let fix = `버클을 쓰면 이렇게 흩어진 구매 고객을 디지털 보증서로 식별해서, <em>실제로 산 고객과 아직 안 산 잠재 고객을 나눠</em> 마케팅할 수 있게 됩니다. 어디서 샀든 보증서를 발급하는 순간 그 고객이 브랜드 멤버가 되고, 자사몰 재구매로 이어지는 라인이 생깁니다.`;
-  fix += ` 특히 ${concerns.map(c=>c.fix).join('. ')}.`;
-  add("효과","버클 도입 시 — 이렇게 달라집니다", fix);
+  add("효과","버클 도입 시 — 이렇게 달라집니다",
+    `<span class="sb-lead">버클을 쓰면 흩어진 구매 고객을 디지털 보증서로 식별해서, <em>실제로 산 고객과 아직 안 산 잠재 고객을 나눠</em> 마케팅할 수 있게 됩니다. 어디서 샀든 보증서를 발급하는 순간 그 고객이 브랜드 멤버가 되고, 자사몰 재구매로 이어지는 라인이 생깁니다.</span>선택하신 환경에서는 — <ul>${concerns.map(c=>`<li>${c.fix}.</li>`).join('')}</ul>`);
 
   // ── 라운지 퍼스트: 주문고객 → 잠재고객까지 모수 확장 (오프라인 현장수집은 위 오프라인 항목에서 다룸) ──
   add("라운지 퍼스트","잠재고객까지 — 모수를 키우는 방향",`여기서 한 발 더 나아가, 보증서로 '이미 산' 고객만 모으는 데서 그치지 않고 <em>브랜드 라운지</em>로 아직 구매하지 않은 잠재 고객 데이터까지 모을 수 있어서, 마케팅 가능한 모수 자체가 커집니다. 기존 구매 고객에게 보증서를 소급 발급하면, 지금 카톡 친구이긴 한데 누군지 모르던 분들까지 한 번에 식별·연결됩니다.`);
@@ -784,7 +789,14 @@ function toMarkdown(){
   if(sys.length){ m+=`\n## 시스템별 주의사항\n`; sys.forEach(s=>{ if(s.check&&s.check.length){ m+=`### ${s.name} (${s.cat} · 리드타임 ${s.lead})\n`; s.check.forEach(c=>m+=`- ${c.t}\n`); }}); }
   m+=`\n## 핏 2차 스코어링\n- **${fit.bucket}**\n`; fit.reasons.forEach(r=>m+=`- ${r}\n`); if(fit.reverse.length){m+=`- 역ICP: ${fit.reverse.join(' / ')}\n`;}
   m+=`\n## 콜 스크립트\n`;
-  scriptBlocks().forEach(b=>{ m+=`**[STEP ${b.n}] ${b.when}**\n> ${b.ment.replace(/<\/?em>/g,'').replace(/<br>/g,' ')}\n\n`; });
+  const mentMd = s => s
+    .replace(/<\/?em>/g,'')
+    .replace(/<span[^>]*>/g,'').replace(/<\/span>/g,'\n')
+    .replace(/<ul[^>]*>/g,'\n').replace(/<\/ul>/g,'')
+    .replace(/<li>/g,'- ').replace(/<\/li>/g,'\n')
+    .replace(/<br\s*\/?>/g,'\n')
+    .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  scriptBlocks().forEach(b=>{ const lbl=/^\d/.test(b.n)?`STEP ${b.n}`:b.n; m+=`**[${lbl}] ${b.when}**\n${mentMd(b.ment)}\n\n`; });
   const remain=RULESET.fields.filter(f=>!isSet(f) && f.stage!=='proposal');
   if(remain.length){ m+=`## 콜에서 더 확인할 질문\n`; remain.forEach(f=>m+=`- (${f.label}) ${f.ask}\n`); }
   const prop=RULESET.fields.filter(f=>f.stage==='proposal');
